@@ -93,7 +93,6 @@ int WiFiManager::autoConnect(char const *apName) {
   return 0;
 }
 
-
 void WiFiManager::connectWifi(String ssid, String pass) {
   DEBUG_PRINT("Connecting as wifi client...");
   WiFi.disconnect();
@@ -253,6 +252,11 @@ void WiFiManager::handleWifiSave() {
   DEBUG_PRINT("Sent wifi save page"); 
   _ssid = urldecode(server.arg("s").c_str());
   _pass = urldecode(server.arg("p").c_str());
+  _name = urldecode(server.arg("n").c_str());
+
+  DEBUG_PRINT(_name);
+  bool ret = ehand.setDevName(_name);
+  DEBUG_PRINT(ret);
   
   //saveCredentials();
   connect = true; //signal ready to connect/reset

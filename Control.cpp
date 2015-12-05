@@ -5,13 +5,16 @@ Control::Control() : server(80) {
 }
 
 void Control::begin(bool debug){
-  DEBUG_PRINT("Configuring access point... ");
   _debug = debug;
+  DEBUG_PRINT("Configuring access point... ");
+  ehand.getDevName();
+  DEBUG_PRINT(ehand.lastname);
   /* Setup web pages: root, wifi config pages, SO captive portal detectors and not found. */
   server.on("/", std::bind(&Control::handleNotFound, this));
-  server.on("/light", std::bind(&Control::handleCmd, this));
+  server.on("/light/off", std::bind(&Control::handleCmd, this, false));
+  server.on("/light/on", std::bind(&Control::handleCmd, this, true));
   server.on("/state", std::bind(&Control::handleState, this));
-  server.on("/wifisave", std::bind(&Control::handleWifiSave, this));
+  server.on("/wifichange", std::bind(&Control::handleWifiSave, this));
   server.onNotFound (std::bind(&Control::handleNotFound, this));
   server.begin(); // Web server start
   DEBUG_PRINT("HTTP server started");
@@ -23,7 +26,9 @@ void Control::handleClient(){
 
 /** Wifi config page handler */
 void Control::handleState() {
-  String s = (light_state)?"{'state': 'on'}":"{'state': 'off'}";
+  String s = "{'name' : '" + (String)ehand.lastname + "',";
+  s += (light_state)?"'state': 'on'":"'state': 'off'";
+  s += "}";
   sendHeader(true, 200, s.c_str());
   server.client().stop();
   DEBUG_PRINT("Sent StatePage");  
@@ -31,11 +36,13 @@ void Control::handleState() {
 
 
 /** Wifi config page handler */
-void Control::handleCmd() {
-  light_state = !light_state;
+void Control::handleCmd(bool state) {
+  light_state = state;
   digitalWrite(pin_light,light_state);
 
-  String s = (light_state)?"{'light': 'on'}":"{'light': 'off'}";
+  String s = "{'name' : '" + (String)ehand.lastname + "',";
+  s += (light_state)?"'state': 'on'":"'state': 'off'";
+  s += "}";
   sendHeader(true, 200, s.c_str());
   
   server.client().stop();
@@ -46,9 +53,6 @@ void Control::handleCmd() {
 /** Handle the WLAN save form and redirect to WLAN config page again */
 void Control::handleWifiSave() {
   DEBUG_PRINT("WiFi save");
-  //server.arg("s").toCharArray(ssid, sizeof(ssid) - 1);
-  //server.arg("p").toCharArray(password, sizeof(password) - 1);
-
   server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   server.sendHeader("Pragma", "no-cache");
   server.sendHeader("Expires", "-1");
@@ -60,20 +64,40 @@ void Control::handleWifiSave() {
   server.sendContent(HTTP_SCRIPT);
   server.sendContent(HTTP_STYLE);
   server.sendContent(HTTP_HEAD_END);
-  
   server.sendContent(HTTP_SAVED);
-
   server.sendContent(HTTP_END);
   server.client().stop();
   
   DEBUG_PRINT("Sent wifi save page"); 
   String _ssid = urldecode(server.arg("s").c_str());
   String _pass = urldecode(server.arg("p").c_str());
+  String _name = urldecode(server.arg("n").c_str());
+
+  DEBUG_PRINT(_name);
+  bool ret = ehand.setDevName(_name);
+
+  DEBUG_PRINT(ret);
+
+  String ssid = WiFi.SSID();
+  String pass = WiFi.psk();
+
+  String v = "|"+ssid+"|";
+  String a = "|"+_ssid+"|";
+  String s = "|"+ pass + "|";
+  String z = "|"+_pass+"|";
+
+  DEBUG_PRINT(v);
+  DEBUG_PRINT(a);
+  DEBUG_PRINT(s);
+  DEBUG_PRINT(z);
   
-  //saveCredentials();
-  WiFi.disconnect();
-  WiFi.begin(_ssid.c_str(), _pass.c_str());
-  connect = true; //signal ready to connect/reset
+  if(!ssid.equals(_ssid) && !pass.equals(_pass)){
+    DEBUG_PRINT("Dados Alterados, reiniciando...");  
+    delay(5000);
+    WiFi.disconnect();
+    WiFi.begin(_ssid.c_str(), _pass.c_str());
+    ESP.restart();
+  }
 }
 
 void Control::handle204() {
@@ -101,7 +125,7 @@ void Control::handleNotFound() {
 template <typename Generic>
 void Control::DEBUG_PRINT(Generic text) {
   if(_debug) {
-    Serial.print("*WM: ");
+    Serial.print("*Ctrl: ");
     Serial.println(text);    
   }
 }
@@ -147,8 +171,6 @@ String Control::urldecode(const char *src){
       *src++;
     }
   }
-  decoded += '\0';
-
   return decoded;
 }
 

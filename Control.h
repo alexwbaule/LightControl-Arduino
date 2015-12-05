@@ -5,7 +5,7 @@
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <DNSServer.h>
-
+#include "EHandle.h"
 
 class Control
 {
@@ -13,7 +13,6 @@ public:
     Control();
     void    begin(bool debug);
     
-
     //for conveniennce
     String  urldecode(const char*);
     void handleClient();
@@ -23,17 +22,21 @@ public:
     int light_state = LOW;
     int lastbutton_state = LOW;
     int pin_light = 2;
-    int pin_button = 0; //GPIO0
+    //int pin_button = 0; //GPIO0
+    
+    long lastDebounceTime = 0;  // the last time the output pin was toggled
+    long debounceDelay = 50;    // the debounce time; increase if the output flickers
     //int pin_button = 1; //GPIO1 - TX;
-    //int pin_button = 3; //GPIO3 - RX;
+    int pin_button = 3; //GPIO3 - RX;
 
 private:
     DNSServer dnsServer;
     ESP8266WebServer server;
 
+    EHandle ehand;
     const int WM_DONE = 0;
     const int WM_WAIT = 10;
-    
+
     const String HTTP_404 = "HTTP/1.1 404 Not Found\r\n\r\n";
     const String HTTP_200 = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
     const String HTTP_HEAD = "<!DOCTYPE html><html lang=\"en\"><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><title>{v}</title>";
@@ -44,11 +47,9 @@ private:
     const String HTTP_FORM = "<form method='get' action='wifisave'><input id='s' name='s' length=32 placeholder='SSID'><input id='p' name='p' length=64 placeholder='password'><br/><button type='submit'>save</button></form>";
     const String HTTP_SAVED = "<div>Credentials Saved<br />Node will reboot in 5 seconds.</div>";
     const String HTTP_END = "</body></html>";
-    //const char HTTP_END[] PROGMEM = R"=====(
-    //</body></html>
-    //)=====";
 
-    void handleCmd();
+
+    void handleCmd(bool state);
     void handleState();
 
     void handleWifiSave();
