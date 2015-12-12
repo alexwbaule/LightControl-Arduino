@@ -31,12 +31,25 @@ void WiFiManager::begin(char const *apName) {
   server.on("/", std::bind(&WiFiManager::handleRoot, this));
   server.on("/wifi", std::bind(&WiFiManager::handleWifi, this, true));
   server.on("/0wifi", std::bind(&WiFiManager::handleWifi, this, false));
+  server.on("/scan", std::bind(&WiFiManager::handleWifiJSON, this));
   server.on("/wifisave", std::bind(&WiFiManager::handleWifiSave, this));
   server.on("/generate_204", std::bind(&WiFiManager::handle204, this));  //Android/Chrome OS captive portal check.
   server.on("/fwlink", std::bind(&WiFiManager::handleRoot, this));  //Microsoft captive portal. Maybe not needed. Might be handled by notFound handler.
   server.onNotFound (std::bind(&WiFiManager::handleNotFound, this));
   server.begin(); // Web server start
   DEBUG_PRINT("HTTP server started");
+  setmDNS();
+}
+
+void WiFiManager::setmDNS(){
+  devDNS = "lgt" + String(ESP.getChipId());
+  DEBUG_PRINT(devDNS);  
+  if (mdns.begin(devDNS.c_str(), WiFi.softAPIP())) {
+    DEBUG_PRINT("DNS Started OK");  
+    _dns = true;
+    mdns.addService("http", "tcp", 80);
+    mdns.update();
+  }
 }
 
 int WiFiManager::autoConnect() {
@@ -181,6 +194,33 @@ void WiFiManager::handleRoot() {
   server.sendContent(HTTP_END);
 
   server.client().stop(); // Stop is needed because we sent no content length
+}
+
+void WiFiManager::handleWifiJSON() {
+  String json;
+  json = "{\"ssids\": [";
+
+  server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  server.sendHeader("Pragma", "no-cache");
+  server.sendHeader("Expires", "-1");
+  server.send(200, "application/json", ""); // Empty content inhibits Content-length header so we have to close the socket ourselves.
+
+  int n = WiFi.scanNetworks();
+  DEBUG_PRINT("Scan done");
+  if (n == 0) {
+    DEBUG_PRINT("No networks found");
+  } else {
+    for (int i = 0; i < n; ++i){
+      json += "\t{\""+WiFi.SSID(i)+"\":\""+WiFi.BSSIDstr(i)+"\"}";
+      if((i + 1) < n)
+        json += ",";
+      yield();
+    }
+  }
+  json += "]}";
+  server.sendContent(json.c_str());
+  server.client().stop();
+  DEBUG_PRINT("Sent config page");  
 }
 
 /** Wifi config page handler */

@@ -4,7 +4,9 @@
 #include "Control.h"
 
 Control ctrl;
-boolean debug = false;
+//boolean debug = false;
+boolean debug = true;
+
 
 void checkButton(){
   ctrl.button_state = digitalRead(ctrl.pin_button);

@@ -5,6 +5,7 @@
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <DNSServer.h>
+#include <ESP8266mDNS.h>
 #include "EHandle.h"
 
 class Control
@@ -16,6 +17,7 @@ public:
     //for conveniennce
     String  urldecode(const char*);
     void handleClient();
+    void setmDNS();
     void setDebugOutput(boolean debug);
 
     int button_state = 0;
@@ -32,6 +34,8 @@ public:
 private:
     DNSServer dnsServer;
     ESP8266WebServer server;
+    MDNSResponder mdns;
+
 
     EHandle ehand;
     const int WM_DONE = 0;
@@ -43,16 +47,18 @@ private:
     const String HTTP_STYLE = "<style>div,input {margin-bottom: 5px;} body{width:200px;display:block;margin-left:auto;margin-right:auto;} button{padding:0.75rem 1rem;border:0;border-radius:0.317rem;background-color:#1fa3ec;color:#fff;line-height:1.5;cursor:pointer;}</style>";
     const String HTTP_SCRIPT = "<script>function c(l){document.getElementById('s').value=l.innerText||l.textContent;document.getElementById('p').focus();}</script>";
     const String HTTP_HEAD_END = "</head><body>";
-    const String HTTP_ITEM = "<div><a href='#' onclick='c(this)'>{v}</a></div>";
+    const String HTTP_ITEM = "<div><a href='#' onclick='c(this)'>{v}</a>&nbsp;{a}</div>";
     const String HTTP_FORM = "<form method='get' action='wifisave'><input id='s' name='s' length=32 placeholder='SSID'><input id='p' name='p' length=64 placeholder='password'><br/><button type='submit'>save</button></form>";
     const String HTTP_SAVED = "<div>Credentials Saved<br />Node will reboot in 5 seconds.</div>";
     const String HTTP_END = "</body></html>";
 
+    String devDNS;
 
     void handleCmd(bool state);
     void handleState();
 
     void handleWifiSave();
+    void handleWifi();
     void handleNotFound();
     void handle204();
 
@@ -62,12 +68,10 @@ private:
     String toStringIp(IPAddress ip);
 
     boolean connect;
+    boolean _dns = false;
     boolean _debug = false;
 
     template <typename Generic>
     void DEBUG_PRINT(Generic text);
 };
-
-
-
 #endif

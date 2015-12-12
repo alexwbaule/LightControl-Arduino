@@ -5,6 +5,7 @@
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <DNSServer.h>
+#include <ESP8266mDNS.h>
 #include "EHandle.h"
 
 
@@ -21,6 +22,7 @@ public:
     
     String  beginConfigMode(void);
     void    startWebConfig();
+    void setmDNS();
     
     //for conveniennce
     String  urldecode(const char*);
@@ -34,11 +36,10 @@ public:
     //sets a custom ip /gateway /subnet configuration
     void    setAPConfig(IPAddress ip, IPAddress gw, IPAddress sn);
     
-    int     serverLoop();
-
 private:
     DNSServer dnsServer;
     ESP8266WebServer server;
+    MDNSResponder mdns;
 
     EHandle ehand;
     const int WM_DONE = 0;
@@ -55,6 +56,7 @@ private:
     const String HTTP_SAVED = "<div>Credentials Saved<br />Node will reboot in 5 seconds.</div>";
     const String HTTP_END = "</body></html>";
     
+    String devDNS;
     int _eepromStart;
     const char* _apName = "no-net";
     String _ssid = "";
@@ -72,11 +74,13 @@ private:
 
     void handleRoot();
     void handleWifi(bool scan);
+    void handleWifiJSON();
     void handleWifiSave();
     void handleNotFound();
     void handle204();
     boolean captivePortal();
-    
+    boolean _dns = false;
+
     // DNS server
     const byte DNS_PORT = 53;
     

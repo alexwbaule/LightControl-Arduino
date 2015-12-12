@@ -14,10 +14,23 @@ void Control::begin(bool debug){
   server.on("/light/off", std::bind(&Control::handleCmd, this, false));
   server.on("/light/on", std::bind(&Control::handleCmd, this, true));
   server.on("/state", std::bind(&Control::handleState, this));
+  server.on("/scan", std::bind(&Control::handleWifi, this));
   server.on("/wifichange", std::bind(&Control::handleWifiSave, this));
   server.onNotFound (std::bind(&Control::handleNotFound, this));
   server.begin(); // Web server start
   DEBUG_PRINT("HTTP server started");
+  setmDNS();
+}
+
+void Control::setmDNS(){
+  devDNS = "lgt" + String(ESP.getChipId());
+  DEBUG_PRINT(devDNS);  
+  if (mdns.begin(devDNS.c_str(), WiFi.localIP())) {
+    DEBUG_PRINT("DNS Started OK");  
+    _dns = true;
+    mdns.addService("http", "tcp", 80);
+    mdns.update();
+  }
 }
 
 void Control::handleClient(){
@@ -44,6 +57,9 @@ void Control::handleCmd(bool state) {
   s += (light_state)?"'state': 'on'":"'state': 'off'";
   s += "}";
   sendHeader(true, 200, s.c_str());
+  if(_dns){
+      mdns.update();
+  }
   
   server.client().stop();
   
@@ -72,25 +88,10 @@ void Control::handleWifiSave() {
   String _ssid = urldecode(server.arg("s").c_str());
   String _pass = urldecode(server.arg("p").c_str());
   String _name = urldecode(server.arg("n").c_str());
-
-  DEBUG_PRINT(_name);
   bool ret = ehand.setDevName(_name);
-
-  DEBUG_PRINT(ret);
-
   String ssid = WiFi.SSID();
   String pass = WiFi.psk();
 
-  String v = "|"+ssid+"|";
-  String a = "|"+_ssid+"|";
-  String s = "|"+ pass + "|";
-  String z = "|"+_pass+"|";
-
-  DEBUG_PRINT(v);
-  DEBUG_PRINT(a);
-  DEBUG_PRINT(s);
-  DEBUG_PRINT(z);
-  
   if(!ssid.equals(_ssid) && !pass.equals(_pass)){
     DEBUG_PRINT("Dados Alterados, reiniciando...");  
     delay(5000);
@@ -98,6 +99,28 @@ void Control::handleWifiSave() {
     WiFi.begin(_ssid.c_str(), _pass.c_str());
     ESP.restart();
   }
+}
+
+void Control::handleWifi() {
+  String json;
+  json = "{\"ssids\": [";
+  
+  int n = WiFi.scanNetworks();
+  DEBUG_PRINT("Scan done");
+  if (n == 0) {
+    DEBUG_PRINT("No networks found");
+  } else {
+    for (int i = 0; i < n; ++i){
+      json += "\t{\""+WiFi.SSID(i)+"\":\""+WiFi.BSSIDstr(i)+"\"}";
+      if((i + 1) < n)
+        json += ",";
+      yield();
+    }
+  }
+  json += "]}";
+  sendHeader(true, 200, json.c_str());
+  server.client().stop();
+  DEBUG_PRINT("Sent config page");  
 }
 
 void Control::handle204() {
