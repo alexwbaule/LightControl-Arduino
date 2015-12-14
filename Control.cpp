@@ -69,10 +69,7 @@ void Control::handleCmd(bool state) {
 /** Handle the WLAN save form and redirect to WLAN config page again */
 void Control::handleWifiSave() {
   DEBUG_PRINT("WiFi save");
-  server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-  server.sendHeader("Pragma", "no-cache");
-  server.sendHeader("Expires", "-1");
-  server.send(200, "text/html", ""); // Empty content inhibits Content-length header so we have to close the socket ourselves.
+  sendHeader(false, 200, "");
 
   String head = HTTP_HEAD;
   head.replace("{v}", "Credentials Saved");
@@ -154,14 +151,14 @@ void Control::DEBUG_PRINT(Generic text) {
 }
 
 void Control::sendHeader(bool json, int cod, const char *content){
+  String type;
+
+  type = json ? "application/json" : "text/html" ;
+
   server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   server.sendHeader("Pragma", "no-cache");
   server.sendHeader("Expires", "-1");
-  if(json){
-    server.send(cod, "application/json", content); // Empty content inhibits Content-length header so we have to close the socket ourselves.
-  }else{
-    server.send(cod, "text/html", content); // Empty content inhibits Content-length header so we have to close the socket ourselves.
-  }
+  server.send(cod, type.c_str(), content);
 }
 
 String Control::urldecode(const char *src){
