@@ -87,6 +87,10 @@ private:
     boolean isIp(String str);
     String toStringIp(IPAddress ip);
 
+    void sendHeader(bool json, int cod, const char *content);
+    void handleState();
+
+
     boolean connect;
     boolean _debug = false;
 

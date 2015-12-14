@@ -28,7 +28,7 @@ void Control::setmDNS(){
   if (mdns.begin(devDNS.c_str(), WiFi.localIP())) {
     DEBUG_PRINT("DNS Started OK");  
     _dns = true;
-    mdns.addService("http", "tcp", 80);
+    mdns.addService("light", "tcp", 80);
     mdns.update();
   }
 }
@@ -39,7 +39,7 @@ void Control::handleClient(){
 
 /** Wifi config page handler */
 void Control::handleState() {
-  String s = "{'name' : '" + (String)ehand.lastname + "',";
+  String s = "{'config' : 'true', 'name' : '" + (String)ehand.lastname + "',";
   s += (light_state)?"'state': 'on'":"'state': 'off'";
   s += "}";
   sendHeader(true, 200, s.c_str());
@@ -111,7 +111,7 @@ void Control::handleWifi() {
     DEBUG_PRINT("No networks found");
   } else {
     for (int i = 0; i < n; ++i){
-      json += "\t{\""+WiFi.SSID(i)+"\":\""+WiFi.BSSIDstr(i)+"\"}";
+      json += "{\""+WiFi.SSID(i)+"\":\""+WiFi.BSSIDstr(i)+"\"}";
       if((i + 1) < n)
         json += ",";
       yield();

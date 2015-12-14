@@ -32,6 +32,7 @@ void WiFiManager::begin(char const *apName) {
   server.on("/wifi", std::bind(&WiFiManager::handleWifi, this, true));
   server.on("/0wifi", std::bind(&WiFiManager::handleWifi, this, false));
   server.on("/scan", std::bind(&WiFiManager::handleWifiJSON, this));
+  server.on("/state", std::bind(&WiFiManager::handleState, this));
   server.on("/wifisave", std::bind(&WiFiManager::handleWifiSave, this));
   server.on("/generate_204", std::bind(&WiFiManager::handle204, this));  //Android/Chrome OS captive portal check.
   server.on("/fwlink", std::bind(&WiFiManager::handleRoot, this));  //Microsoft captive portal. Maybe not needed. Might be handled by notFound handler.
@@ -41,13 +42,21 @@ void WiFiManager::begin(char const *apName) {
   setmDNS();
 }
 
+/** Wifi config page handler */
+void WiFiManager::handleState() {
+  String s = "{'config' : 'false'}";
+  sendHeader(true, 200, s.c_str());
+  server.client().stop();
+  DEBUG_PRINT("Sent StatePage");  
+}
+
 void WiFiManager::setmDNS(){
   devDNS = "lgt" + String(ESP.getChipId());
   DEBUG_PRINT(devDNS);  
   if (mdns.begin(devDNS.c_str(), WiFi.softAPIP())) {
     DEBUG_PRINT("DNS Started OK");  
     _dns = true;
-    mdns.addService("http", "tcp", 80);
+    mdns.addService("light", "tcp", 80);
     mdns.update();
   }
 }
@@ -194,6 +203,7 @@ void WiFiManager::handleRoot() {
   server.sendContent(HTTP_END);
 
   server.client().stop(); // Stop is needed because we sent no content length
+  yield();
 }
 
 void WiFiManager::handleWifiJSON() {
@@ -211,7 +221,7 @@ void WiFiManager::handleWifiJSON() {
     DEBUG_PRINT("No networks found");
   } else {
     for (int i = 0; i < n; ++i){
-      json += "\t{\""+WiFi.SSID(i)+"\":\""+WiFi.BSSIDstr(i)+"\"}";
+      json += "{\""+WiFi.SSID(i)+"\":\""+WiFi.BSSIDstr(i)+"\"}";
       if((i + 1) < n)
         json += ",";
       yield();
@@ -331,6 +341,7 @@ void WiFiManager::handleNotFound() {
   server.sendHeader("Pragma", "no-cache");
   server.sendHeader("Expires", "-1");
   server.send ( 404, "text/plain", message );
+  yield();
 }
 
 
@@ -341,9 +352,21 @@ boolean WiFiManager::captivePortal() {
     server.sendHeader("Location", String("http://") + toStringIp(server.client().localIP()), true);
     server.send ( 302, "text/plain", ""); // Empty content inhibits Content-length header so we have to close the socket ourselves.
     server.client().stop(); // Stop is needed because we sent no content length
+    yield();    
     return true;
   }
+  yield();    
   return false;
+}
+void WiFiManager::sendHeader(bool json, int cod, const char *content){
+  server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  server.sendHeader("Pragma", "no-cache");
+  server.sendHeader("Expires", "-1");
+  if(json){
+    server.send(cod, "application/json", content); // Empty content inhibits Content-length header so we have to close the socket ourselves.
+  }else{
+    server.send(cod, "text/html", content); // Empty content inhibits Content-length header so we have to close the socket ourselves.
+  }
 }
 
 
