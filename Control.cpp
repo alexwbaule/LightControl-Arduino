@@ -100,7 +100,7 @@ void Control::handleWifiSave() {
 
 void Control::handleWifi() {
   String json;
-  json = "{\"ssids\": [";
+  json = "{\"apssid\": [";
   
   int n = WiFi.scanNetworks();
   DEBUG_PRINT("Scan done");
@@ -108,7 +108,7 @@ void Control::handleWifi() {
     DEBUG_PRINT("No networks found");
   } else {
     for (int i = 0; i < n; ++i){
-      json += "{\""+WiFi.SSID(i)+"\":\""+WiFi.BSSIDstr(i)+"\"}";
+      json += "{\"ssid\" : \"" + WiFi.SSID(i) + "\",\"mac\": \"" + WiFi.BSSIDstr(i) + "\", \"signal\" : \"" + WiFi.RSSI(i) + "\"}";
       if((i + 1) < n)
         json += ",";
       yield();

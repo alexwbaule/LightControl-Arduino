@@ -208,7 +208,7 @@ void WiFiManager::handleRoot() {
 
 void WiFiManager::handleWifiJSON() {
   String json;
-  json = "{\"ssids\": [";
+  json = "{\"apssid\": [";
 
   server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   server.sendHeader("Pragma", "no-cache");
@@ -221,7 +221,7 @@ void WiFiManager::handleWifiJSON() {
     DEBUG_PRINT("No networks found");
   } else {
     for (int i = 0; i < n; ++i){
-      json += "{\""+WiFi.SSID(i)+"\":\""+WiFi.BSSIDstr(i)+"\"}";
+      json += "{\"ssid\" : \"" + WiFi.SSID(i) + "\",\"mac\": \"" + WiFi.BSSIDstr(i) + "\", \"signal\" : \"" + WiFi.RSSI(i) + "\"}";
       if((i + 1) < n)
         json += ",";
       yield();
