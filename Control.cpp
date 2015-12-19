@@ -25,7 +25,7 @@ void Control::begin(bool debug){
 void Control::setmDNS(){
   devDNS = "lgt" + String(ESP.getChipId());
   DEBUG_PRINT(devDNS);  
-  if (mdns.begin(devDNS.c_str(), WiFi.localIP())) {
+  if (mdns.begin(devDNS.c_str())) {
     DEBUG_PRINT("DNS Started OK");  
     _dns = true;
     mdns.addService("light", "tcp", 80);
@@ -69,16 +69,8 @@ void Control::handleCmd(bool state) {
 /** Handle the WLAN save form and redirect to WLAN config page again */
 void Control::handleWifiSave() {
   DEBUG_PRINT("WiFi save");
-  sendHeader(false, 200, "");
-
-  String head = HTTP_HEAD;
-  head.replace("{v}", "Credentials Saved");
-  server.sendContent(head);
-  server.sendContent(HTTP_SCRIPT);
-  server.sendContent(HTTP_STYLE);
-  server.sendContent(HTTP_HEAD_END);
-  server.sendContent(HTTP_SAVED);
-  server.sendContent(HTTP_END);
+  String s = "{'saved' : 'true'}";
+  sendHeader(true, 200, s.c_str());
   server.client().stop();
   
   DEBUG_PRINT("Sent wifi save page"); 

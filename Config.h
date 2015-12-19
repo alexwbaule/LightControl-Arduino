@@ -72,8 +72,6 @@ private:
     int status = WL_IDLE_STATUS;
     void connectWifi(String ssid, String pass);
 
-    void handleRoot();
-    void handleWifi(bool scan);
     void handleWifiJSON();
     void handleWifiSave();
     void handleNotFound();
@@ -97,7 +95,4 @@ private:
     template <typename Generic>
     void DEBUG_PRINT(Generic text);
 };
-
-
-
 #endif

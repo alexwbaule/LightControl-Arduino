@@ -28,14 +28,11 @@ void WiFiManager::begin(char const *apName) {
   dnsServer.start(DNS_PORT, "*", WiFi.softAPIP());
 
   /* Setup web pages: root, wifi config pages, SO captive portal detectors and not found. */
-  server.on("/", std::bind(&WiFiManager::handleRoot, this));
-  server.on("/wifi", std::bind(&WiFiManager::handleWifi, this, true));
-  server.on("/0wifi", std::bind(&WiFiManager::handleWifi, this, false));
+  server.on("/", std::bind(&WiFiManager::handleNotFound, this));
   server.on("/scan", std::bind(&WiFiManager::handleWifiJSON, this));
   server.on("/state", std::bind(&WiFiManager::handleState, this));
-  server.on("/wifisave", std::bind(&WiFiManager::handleWifiSave, this));
+  server.on("/wifichange", std::bind(&WiFiManager::handleWifiSave, this));
   server.on("/generate_204", std::bind(&WiFiManager::handle204, this));  //Android/Chrome OS captive portal check.
-  server.on("/fwlink", std::bind(&WiFiManager::handleRoot, this));  //Microsoft captive portal. Maybe not needed. Might be handled by notFound handler.
   server.onNotFound (std::bind(&WiFiManager::handleNotFound, this));
   server.begin(); // Web server start
   DEBUG_PRINT("HTTP server started");
@@ -53,7 +50,7 @@ void WiFiManager::handleState() {
 void WiFiManager::setmDNS(){
   devDNS = "lgt" + String(ESP.getChipId());
   DEBUG_PRINT(devDNS);  
-  if (mdns.begin(devDNS.c_str(), WiFi.softAPIP())) {
+  if (mdns.begin(devDNS.c_str())) {
     DEBUG_PRINT("DNS Started OK");  
     _dns = true;
     mdns.addService("light", "tcp", 80);
@@ -62,7 +59,7 @@ void WiFiManager::setmDNS(){
 }
 
 int WiFiManager::autoConnect() {
-  String ssid = "LiCtrl_" + String(ESP.getChipId());
+  String ssid = "lgt" + String(ESP.getChipId());
   return autoConnect(ssid.c_str());
 }
 
@@ -108,8 +105,8 @@ int WiFiManager::autoConnect(char const *apName) {
         //connected
         return 2;
       }
- 
     }
+    //mdns.update();
     yield();    
   }
   return 0;
@@ -124,8 +121,7 @@ void WiFiManager::connectWifi(String ssid, String pass) {
   DEBUG_PRINT ( connRes );
 }
 
-String WiFiManager::urldecode(const char *src)
-{
+String WiFiManager::urldecode(const char *src){
   String decoded = "";
   char a, b;
   while (*src) {
@@ -155,8 +151,6 @@ String WiFiManager::urldecode(const char *src)
       *src++;
     }
   }
-  decoded += '\0';
-
   return decoded;
 }
 
@@ -174,47 +168,10 @@ void WiFiManager::setAPConfig(IPAddress ip, IPAddress gw, IPAddress sn) {
   _sn = sn;
 }
 
-/** Handle root or redirect to captive portal */
-void WiFiManager::handleRoot() {
-  DEBUG_PRINT("Handle root");
-  if (captivePortal()) { // If caprive portal redirect instead of displaying the page.
-    return;
-  }
-
-  server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-  server.sendHeader("Pragma", "no-cache");
-  server.sendHeader("Expires", "-1");
-  server.send(200, "text/html", ""); // Empty content inhibits Content-length header so we have to close the socket ourselves.
-
-  String head = HTTP_HEAD;
-  head.replace("{v}", "Options");
-  server.sendContent(head);
-  server.sendContent(HTTP_SCRIPT);
-  server.sendContent(HTTP_STYLE);
-  server.sendContent(HTTP_HEAD_END);
-  
-  server.sendContent(
-    "<form action=\"/wifi\" method=\"get\"><button>Configure WiFi</button></form><br/>"
-  );
-  server.sendContent(
-    "<form action=\"/0wifi\" method=\"get\"><button>Configure WiFi (No Scan)</button></form>"
-  );
-  
-  server.sendContent(HTTP_END);
-
-  server.client().stop(); // Stop is needed because we sent no content length
-  yield();
-}
-
 void WiFiManager::handleWifiJSON() {
   String json;
   json = "{\"apssid\": [";
-
-  server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-  server.sendHeader("Pragma", "no-cache");
-  server.sendHeader("Expires", "-1");
-  server.send(200, "application/json", ""); // Empty content inhibits Content-length header so we have to close the socket ourselves.
-
+  
   int n = WiFi.scanNetworks();
   DEBUG_PRINT("Scan done");
   if (n == 0) {
@@ -228,75 +185,16 @@ void WiFiManager::handleWifiJSON() {
     }
   }
   json += "]}";
-  server.sendContent(json.c_str());
+  sendHeader(true, 200, json.c_str());
   server.client().stop();
-  DEBUG_PRINT("Sent config page");  
-}
-
-/** Wifi config page handler */
-void WiFiManager::handleWifi(bool scan) {
-  server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-  server.sendHeader("Pragma", "no-cache");
-  server.sendHeader("Expires", "-1");
-  server.send(200, "text/html", ""); // Empty content inhibits Content-length header so we have to close the socket ourselves.
-
-
-  String head = HTTP_HEAD;
-  head.replace("{v}", "Config ESP");
-  server.sendContent(head);
-  server.sendContent(HTTP_SCRIPT);
-  server.sendContent(HTTP_STYLE);
-  server.sendContent(HTTP_HEAD_END);
-
-  if (scan) {
-    int n = WiFi.scanNetworks();
-    DEBUG_PRINT("Scan done");
-    if (n == 0) {
-      DEBUG_PRINT("No networks found");
-      server.sendContent("<div>No networks found. Refresh to scan again.</div>");
-    }
-    else {
-      for (int i = 0; i < n; ++i)
-      {
-        DEBUG_PRINT(WiFi.SSID(i));
-        DEBUG_PRINT(WiFi.RSSI(i));
-        String item = HTTP_ITEM;
-        item.replace("{v}", WiFi.SSID(i));
-        item.replace("{a}", WiFi.BSSIDstr(i));
-        server.sendContent(item);
-        yield();
-      }
-    }
-  }
-  
-  server.sendContent(HTTP_FORM);
-  server.sendContent(HTTP_END);
-  server.client().stop();
-  
   DEBUG_PRINT("Sent config page");  
 }
 
 /** Handle the WLAN save form and redirect to WLAN config page again */
 void WiFiManager::handleWifiSave() {
   DEBUG_PRINT("WiFi save");
-  //server.arg("s").toCharArray(ssid, sizeof(ssid) - 1);
-  //server.arg("p").toCharArray(password, sizeof(password) - 1);
-
-  server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-  server.sendHeader("Pragma", "no-cache");
-  server.sendHeader("Expires", "-1");
-  server.send(200, "text/html", ""); // Empty content inhibits Content-length header so we have to close the socket ourselves.
-
-  String head = HTTP_HEAD;
-  head.replace("{v}", "Credentials Saved");
-  server.sendContent(head);
-  server.sendContent(HTTP_SCRIPT);
-  server.sendContent(HTTP_STYLE);
-  server.sendContent(HTTP_HEAD_END);
-  
-  server.sendContent(HTTP_SAVED);
-
-  server.sendContent(HTTP_END);
+  String s = "{'saved' : 'true'}";
+  sendHeader(true, 200, s.c_str());
   server.client().stop();
   
   DEBUG_PRINT("Sent wifi save page"); 
@@ -341,7 +239,6 @@ void WiFiManager::handleNotFound() {
   server.sendHeader("Pragma", "no-cache");
   server.sendHeader("Expires", "-1");
   server.send ( 404, "text/plain", message );
-  yield();
 }
 
 
@@ -352,21 +249,19 @@ boolean WiFiManager::captivePortal() {
     server.sendHeader("Location", String("http://") + toStringIp(server.client().localIP()), true);
     server.send ( 302, "text/plain", ""); // Empty content inhibits Content-length header so we have to close the socket ourselves.
     server.client().stop(); // Stop is needed because we sent no content length
-    yield();    
     return true;
   }
-  yield();    
   return false;
 }
 void WiFiManager::sendHeader(bool json, int cod, const char *content){
+  String type;
+
+  type = json ? "application/json" : "text/html" ;
+
   server.sendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   server.sendHeader("Pragma", "no-cache");
   server.sendHeader("Expires", "-1");
-  if(json){
-    server.send(cod, "application/json", content); // Empty content inhibits Content-length header so we have to close the socket ourselves.
-  }else{
-    server.send(cod, "text/html", content); // Empty content inhibits Content-length header so we have to close the socket ourselves.
-  }
+  server.send(cod, type.c_str(), content);
 }
 
 
