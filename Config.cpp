@@ -41,7 +41,10 @@ void WiFiManager::begin(char const *apName) {
 
 /** Wifi config page handler */
 void WiFiManager::handleState() {
-  String s = "{'config' : 'false'}";
+  String s = "{'config' : 'false',";
+  s += "'signal' : '" + (String)WiFi.RSSI() + "'";
+  s += "}";
+
   sendHeader(true, 200, s.c_str());
   server.client().stop();
   DEBUG_PRINT("Sent StatePage");  

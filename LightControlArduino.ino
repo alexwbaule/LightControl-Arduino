@@ -8,22 +8,6 @@ Control ctrl;
 boolean debug = true;
 
 
-void checkButton(){
-  ctrl.button_state = digitalRead(ctrl.pin_button);
-  
-  if(ctrl.lastbutton_state == ctrl.button_state){
-    return;
-  }
-  ctrl.lastbutton_state = ctrl.button_state;
-  
-  if (ctrl.button_state == LOW){
-    return;
-  }
-  delay(100);
-  ctrl.light_state = !ctrl.light_state;
-  digitalWrite(ctrl.pin_light,ctrl.light_state);
-}
-
 void checkButtonTime(){
   int reading = digitalRead(ctrl.pin_button);
 
@@ -69,7 +53,6 @@ void setup() {
 }
 
 void loop() {
-    //checkButton();
     checkButtonTime();
     ctrl.handleClient();
 }

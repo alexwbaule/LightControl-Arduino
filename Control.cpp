@@ -40,7 +40,8 @@ void Control::handleClient(){
 /** Wifi config page handler */
 void Control::handleState() {
   String s = "{'config' : 'true', 'name' : '" + (String)ehand.lastname + "',";
-  s += (light_state)?"'state': 'on'":"'state': 'off'";
+  s += (light_state)?"'state': 'on',":"'state': 'off',";
+  s += "'signal' : '" + (String)WiFi.RSSI() + "'";
   s += "}";
   sendHeader(true, 200, s.c_str());
   server.client().stop();
@@ -54,7 +55,8 @@ void Control::handleCmd(bool state) {
   digitalWrite(pin_light,light_state);
 
   String s = "{'name' : '" + (String)ehand.lastname + "',";
-  s += (light_state)?"'state': 'on'":"'state': 'off'";
+  s += (light_state)?"'state': 'on',":"'state': 'off',";
+  s += "'signal' : '" + (String)WiFi.RSSI() + "'";
   s += "}";
   sendHeader(true, 200, s.c_str());
   if(_dns){
