@@ -11,6 +11,7 @@ class EHandle
 public:
   EHandle();
   void getDevName();
+  void clear();
   bool setDevName(String thename);
   char lastname[MAX_NAME];
 };

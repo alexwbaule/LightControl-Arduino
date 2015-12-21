@@ -94,9 +94,7 @@ int WiFiManager::autoConnect(char const *apName) {
   begin(apName);
 
   while(1) {
-    //DNS
     dnsServer.processNextRequest();
-    //HTTP
     server.handleClient();
     
     if(connect) {
@@ -104,6 +102,7 @@ int WiFiManager::autoConnect(char const *apName) {
       connect = false;
       connectWifi(_ssid, _pass);
       int s = WiFi.status();
+      yield();    
       if (s == WL_CONNECTED) {
         //connected
         return 2;
@@ -176,6 +175,7 @@ void WiFiManager::handleWifiJSON() {
   json = "{\"apssid\": [";
   
   int n = WiFi.scanNetworks();
+  yield();
   DEBUG_PRINT("Scan done");
   if (n == 0) {
     DEBUG_PRINT("No networks found");
@@ -190,7 +190,7 @@ void WiFiManager::handleWifiJSON() {
   json += "]}";
   sendHeader(true, 200, json.c_str());
   server.client().stop();
-  DEBUG_PRINT("Sent config page");  
+  DEBUG_PRINT("Sent wifi json page");  
 }
 
 /** Handle the WLAN save form and redirect to WLAN config page again */

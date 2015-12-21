@@ -6,6 +6,7 @@
 Control ctrl;
 //boolean debug = false;
 boolean debug = true;
+int times = 7;
 
 
 void checkButtonTime(){
@@ -33,21 +34,30 @@ void setup() {
 
   digitalWrite(ctrl.pin_light, ctrl.light_state);
 
-  if(debug)
+  if(debug){
     Serial.begin(115200);
-
+    Serial.print("wait is ");
+    Serial.println(times);
+  }
 
   WiFiManager wifi(debug);
   int r = wifi.autoConnect();
 
   if(r == 2){
-    delay(5000);
+    while(1){
+      delay(1000);
+      yield();
+      times++;
+      if(times >= 7)
+        break;     
+    }
     if(debug)
         Serial.println("Rebooting....");
     ESP.restart();
   }
 
   ctrl.begin(debug);
+  
   if(debug)
     Serial.println("Wifi OK, pode usar agora....");
 }
