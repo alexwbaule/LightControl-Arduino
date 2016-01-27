@@ -18,7 +18,7 @@ void checkButtonTime(){
   if ((millis() - ctrl.lastDebounceTime) > ctrl.debounceDelay) {
     if (reading != ctrl.button_state) {
       ctrl.button_state = reading;
-      if (ctrl.button_state == HIGH) {
+      if (ctrl.button_state == LOW) {
         ctrl.light_state = !ctrl.light_state;
       }
     }

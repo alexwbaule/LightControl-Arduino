@@ -23,13 +23,19 @@ public:
     int button_state = 0;
     int light_state = LOW;
     int lastbutton_state = LOW;
-    int pin_light = 2;
-    //int pin_button = 0; //GPIO0
-    
     long lastDebounceTime = 0;  // the last time the output pin was toggled
     long debounceDelay = 50;    // the debounce time; increase if the output flickers
-    //int pin_button = 1; //GPIO1 - TX;
-    int pin_button = 3; //GPIO3 - RX;
+
+    //DEBUG
+    int pin_light = 2; //GPIO2
+    int pin_button = 0; //GPIO0
+    //END DEBUG
+
+    // PRODUCTION
+    //int pin_light = 1; //GPIO1 - TX;
+    //int pin_button = 3; //GPIO3 - RX;
+    // END PRODUCTION
+
 
 private:
     DNSServer dnsServer;
